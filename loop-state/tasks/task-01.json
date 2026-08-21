@@ -1,9 +1,9 @@
 {
   "task_id": "TASK-01",
   "task_name": "RFP原文と要求事項を整理する",
-  "phase": "junior_working",
-  "review_number": 0,
-  "current_artifact": null,
+  "phase": "review_requested",
+  "review_number": 2,
+  "current_artifact": "workspace/task-01-requirements/v3/requirements-v3.md",
   "issues": [],
   "latest_review_request": null
 }
