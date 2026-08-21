@@ -1,24 +1,87 @@
 ---
-name: manager-review
-description: TODO-12: マネージャーがレビュー依頼された成果物を確認する場面で発動する説明を書く。
+name: manager-review-watch
+description: Asana上でマネージャー宛てに届いたRFP成果物のレビュー依頼を検出し、ローカル成果物、タスク完了条件、関連資料、前回指摘を照合してレビューサマリーとAsana投稿案を作る。マネージャー役の初回レビュー、再レビュー、承認判断、ループ監視で使用する。
+argument-hint: "[task-name-or-task-id]"
 ---
 
-# Manager Review
+# Manager Review Watch Skill
 
-## Goal
-TODO-13: AIレビューの目的を書く。
+プロジェクト「提案RFP対応」で、マネージャーとしてレビュー依頼を処理する。
 
-## Inputs
-TODO-14: レビュー前に必ず読む情報を列挙する。
+## レビュー対象の判定
 
-## Review workflow
-TODO-15: タスク適合性、RFP適合性、内容品質、前回Issue確認の順で工程を書く。
+1. Asana MCPで現在のユーザーが担当する未完了タスクを取得する。
+2. `$ARGUMENTS` がある場合は、そのタスクを優先する。
+3. 最新コメントに `[REVIEW_REQUEST]` または `[RE_REVIEW_REQUEST]` があるタスクを対象にする。
+4. 同じレビュー依頼コメントIDと成果物版が `.loop-state/tasks/` で処理済みならスキップする。
 
-## Issue format
-TODO-16: 各指摘に必要な項目（Issue ID / severity / finding / evidence / recommendation）を定義する。
+## レビューに必要な入力
+
+- 成果物名
+- 相対パス
+- 版
+- 実施内容
+- 確認依頼
+- 懸念
+
+
+## レビュー手順
+
+1. レビュー依頼コメントから成果物名、相対パス、版、実施内容、セルフレビュー、確認依頼、懸念を抽出する。
+2. ローカル成果物を開き、タスク説明、完了条件、RFP原文、関連成果物、前回レビューと比較する。
+3. 次の順序で評価する。
+   - タスク適合性
+   - 内容品質
+   - 成果物間整合性
+   - 前回指摘への対応状況
+4. 指摘ごとに 重要度、対象箇所、事実、根拠、改善案を記載する。
+5. 再レビューでは各指摘を `解決済み`、`一部解決`、`未解決`、`未対応` に分類する。
+6. [review-verification.md](review-verification.md) に従い、根拠のない指摘、過剰な重大度、推測を除外する。
+7. Asanaへ書き込む前に、マネージャー向けサマリーを提示する。
+8. マネージャーの明示的な承認後にのみ、Asana MCPで `[REVIEW_RESULT]` または `[APPROVED]` を投稿する。
+9. 修正依頼時は担当者をジュニアへ戻す。承認時はタスクを完了する。
+10. `.loop-state/tasks/<task-id>.json` に処理対象、成果物版、レビュー結果、未解決指摘を保存する。
+
+## マネージャー向け出力順序
+
+1. AI推奨判定
+2. 総評
+3. 重要な指摘
+4. 前回指摘への対応状況
+5. マネージャーが判断すべき点
+6. Human Gateの有無
+7. Asana投稿案
+
+## Asanaコメントの状態タグ
+Asana MCPではタグの付与を行うツールが利用できないため、コメント付与の際に以下のフォーマットでテキストを追加することで、タスクの状態を表すタグ運用を行う。
+
+### タグフォーマット
+```
+status: {状態タグ}
+
+{成果物の情報を続けて記載する}
+```
+
+### オプション
+- レビュー完了のみ、未承認: [REVIEW_RESULT]
+- 承認: [APPROVED]- 
+
 
 ## Human Gate
-TODO-17: AIが自動でAsanaへレビュー結果を書いてはいけない条件を書く。
 
-## Approval
-TODO-18: 承認可能な条件を書く。
+以下の場合は自動投稿せず、マネージャー判断を要求する。
+
+- Critical相当のセキュリティ・契約・個人情報問題
+- 成果物へアクセスできない
+- 根拠箇所を特定できない
+- 顧客判断が必要
+- 前回版との対応関係が不明
+- AIレビューの確信度が低い
+
+
+
+## 補助資料
+
+- 投稿形式は [review-comment-templates.md](review-comment-templates.md) を参照する。
+- 重大度と検証規則は [review-verification.md](review-verification.md) を参照する。
+- RFPレビュー観点は [rfp-review-checklist.md](rfp-review-checklist.md) を参照する。
